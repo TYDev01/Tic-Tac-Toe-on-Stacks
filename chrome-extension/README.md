@@ -64,11 +64,13 @@ A Chrome browser extension for quick access to the Tic-Tac-Toe on Stacks blockch
 
 ### First Setup
 
-1. **Connect Wallet**
+1. **Add Wallet Address**
    - Click the extension icon in your toolbar
-   - Click "Connect Wallet" 
-   - Approve the connection in your Stacks wallet
-   - Ensure you're connected to Stacks testnet
+   - Click "Add Wallet Address" 
+   - Enter your Stacks testnet address (starts with ST)
+   - You can find this in your wallet or by connecting through the main app first
+
+**Note**: The extension currently works in monitoring mode. For full wallet functionality (creating games, making moves), use the main app. The extension provides notifications and quick access to your games.
 
 2. **Enable Notifications**
    - The notifications toggle should be enabled by default

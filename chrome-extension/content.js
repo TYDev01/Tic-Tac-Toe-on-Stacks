@@ -60,81 +60,44 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     console.log('Content script received message:', message);
     
     switch (message.type) {
-        case 'CONNECT_WALLET':
-            handleConnectWallet(sendResponse);
-            return true; // Keep message port open for async response
-            
-        case 'CREATE_GAME':
-            handleCreateGame(message, sendResponse);
-            return true;
-            
         case 'SHOW_NOTIFICATION':
             showInPageNotification(message.title, message.message, message.type);
             break;
+            
+        case 'CHECK_WALLET_CONNECTION':
+            checkWalletConnection(sendResponse);
+            return true;
             
         default:
             console.log('Unknown message type:', message.type);
     }
 });
 
-// Handle wallet connection
-async function handleConnectWallet(sendResponse) {
+// Check if wallet is connected on the current page
+async function checkWalletConnection(sendResponse) {
     try {
-        console.log('Connecting wallet...');
-        
-        // Send message to injected script
-        const response = await sendMessageToPage('CONNECT_WALLET', {});
-        
-        if (response && response.success) {
-            sendResponse({
-                success: true,
-                address: response.address
-            });
-        } else {
-            sendResponse({
-                success: false,
-                error: response.error || 'Failed to connect wallet'
-            });
+        // Check if we're on the main app and if wallet is connected
+        if (window.location.hostname === 'localhost' && window.location.port === '3000') {
+            // Try to detect if wallet is connected by looking for wallet elements
+            const walletButton = document.querySelector('[data-testid="wallet-button"]');
+            if (walletButton && walletButton.textContent.includes('ST')) {
+                const address = walletButton.textContent.match(/ST[A-Z0-9]+/);
+                if (address) {
+                    sendResponse({
+                        success: true,
+                        address: address[0]
+                    });
+                    return;
+                }
+            }
         }
-    } catch (error) {
-        console.error('Error connecting wallet:', error);
+        
         sendResponse({
             success: false,
-            error: error.message
+            error: 'Wallet not detected. Please connect through the main app.'
         });
-    }
-}
-
-// Handle game creation
-async function handleCreateGame(message, sendResponse) {
-    try {
-        console.log('Creating game...', message);
-        
-        const response = await sendMessageToPage('CREATE_GAME', {
-            stakeAmount: message.stakeAmount,
-            movePosition: message.movePosition
-        });
-        
-        if (response && response.success) {
-            sendResponse({
-                success: true,
-                gameId: response.gameId
-            });
-            
-            // Show success notification
-            showInPageNotification(
-                'Game Created! 🎮',
-                `Game #${response.gameId} created successfully`,
-                'success'
-            );
-        } else {
-            sendResponse({
-                success: false,
-                error: response.error || 'Failed to create game'
-            });
-        }
     } catch (error) {
-        console.error('Error creating game:', error);
+        console.error('Error checking wallet connection:', error);
         sendResponse({
             success: false,
             error: error.message

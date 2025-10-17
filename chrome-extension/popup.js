@@ -86,6 +86,12 @@ function setupEventListeners() {
     elements.connectBtn.addEventListener('click', connectWallet);
     elements.disconnectBtn.addEventListener('click', disconnectWallet);
     
+    // Add second open app button
+    const openAppBtn2 = document.getElementById('openAppBtn2');
+    if (openAppBtn2) {
+        openAppBtn2.addEventListener('click', openFullApp);
+    }
+    
     // Quick actions
     elements.createGameBtn.addEventListener('click', showCreateGameModal);
     elements.joinGameBtn.addEventListener('click', openJoinGames);
@@ -129,21 +135,26 @@ async function checkWalletConnection() {
 // Update connection status display
 function updateConnectionStatus(connected) {
     elements.statusDot.className = `status-dot ${connected ? 'online' : 'offline'}`;
-    elements.statusText.textContent = connected ? 'Connected' : 'Disconnected';
+    elements.statusText.textContent = connected ? 'Monitoring Games' : 'Not Monitoring';
 }
 
 // Connect wallet
 async function connectWallet() {
     try {
-        // Send message to content script to connect wallet
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        // For Chrome extensions, we need to redirect to the main app for wallet connection
+        // This is a simpler and more reliable approach
         
-        const response = await chrome.tabs.sendMessage(tab.id, {
-            type: 'CONNECT_WALLET'
-        });
+        // Ask user to manually enter their address for monitoring
+        const userAddress = prompt(
+            'Enter your Stacks testnet address to enable game monitoring:\n\n' +
+            '• You can find this in your Stacks wallet\n' +
+            '• Or connect through the main app first to see your address\n' +
+            '• Address should start with "ST"\n\n' +
+            'This enables notifications and game monitoring (read-only).'
+        );
         
-        if (response && response.success && response.address) {
-            currentAddress = response.address;
+        if (userAddress && userAddress.startsWith('ST')) {
+            currentAddress = userAddress;
             await chrome.storage.local.set({
                 [STORAGE_KEYS.WALLET_ADDRESS]: currentAddress
             });
@@ -158,12 +169,24 @@ async function connectWallet() {
                 type: 'WALLET_CONNECTED',
                 address: currentAddress
             });
+            
+            showSuccess('Address added! You will now receive notifications for your games. Use the main app for playing.');
+        } else if (userAddress) {
+            showError('Invalid address. Please enter a valid Stacks testnet address starting with ST.');
         } else {
-            throw new Error(response?.error || 'Failed to connect wallet');
+            // User cancelled - offer to open main app
+            const openApp = confirm('Would you like to open the main app to connect your wallet first?');
+            if (openApp) {
+                chrome.tabs.create({ 
+                    url: 'http://localhost:3000/',
+                    active: true 
+                });
+            }
         }
+        
     } catch (error) {
         console.error('Error connecting wallet:', error);
-        showError('Failed to connect wallet. Make sure you have a Stacks wallet installed.');
+        showError('Failed to connect wallet. Please use the main app for full wallet functionality.');
     }
 }
 
@@ -428,32 +451,26 @@ async function createGame() {
             return;
         }
         
-        // Show loading state
-        elements.confirmCreateBtn.textContent = 'Creating...';
-        elements.confirmCreateBtn.disabled = true;
+        // For now, redirect to main app for game creation with pre-filled values
+        const createUrl = `http://localhost:3000/create?stake=${stakeAmount}&position=${selectedMovePosition}`;
         
-        // Send message to content script to create game
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        
-        const response = await chrome.tabs.sendMessage(tab.id, {
-            type: 'CREATE_GAME',
-            stakeAmount: Math.floor(stakeAmount * 1000000), // Convert to microSTX
-            movePosition: selectedMovePosition
+        chrome.tabs.create({ 
+            url: createUrl,
+            active: true 
         });
         
-        if (response && response.success) {
-            hideCreateGameModal();
-            showSuccess('Game created successfully!');
-            await loadGames();
-        } else {
-            throw new Error(response?.error || 'Failed to create game');
-        }
+        hideCreateGameModal();
+        
+        showSuccess(`Redirecting to main app to create game with ${stakeAmount} STX stake...`);
+        
+        // Close popup after short delay
+        setTimeout(() => {
+            window.close();
+        }, 2000);
+        
     } catch (error) {
         console.error('Error creating game:', error);
-        showError('Failed to create game: ' + error.message);
-    } finally {
-        elements.confirmCreateBtn.textContent = 'Create Game';
-        elements.confirmCreateBtn.disabled = false;
+        showError('Failed to open game creation: ' + error.message);
     }
 }
 

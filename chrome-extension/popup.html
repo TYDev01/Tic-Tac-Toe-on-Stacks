@@ -12,11 +12,11 @@
         <div class="header">
             <div class="logo">
                 <span class="icon">🎲</span>
-                <h1>TicTacToe</h1>
+                <h1>TicTacToe Monitor</h1>
             </div>
             <div class="status" id="connectionStatus">
                 <span class="status-dot offline" id="statusDot"></span>
-                <span id="statusText">Disconnected</span>
+                <span id="statusText">Not Monitoring</span>
             </div>
         </div>
 
@@ -25,9 +25,10 @@
             <div class="wallet-card" id="walletCard">
                 <div class="wallet-disconnected" id="walletDisconnected">
                     <div class="wallet-icon">🔗</div>
-                    <h3>Connect Your Wallet</h3>
-                    <p>Connect to play games and receive notifications</p>
-                    <button class="btn btn-primary" id="connectBtn">Connect Wallet</button>
+                    <h3>Setup Extension</h3>
+                    <p>Enter your wallet address to monitor games and receive notifications</p>
+                    <button class="btn btn-primary" id="connectBtn">Add Wallet Address</button>
+                    <button class="btn btn-secondary" id="openAppBtn2" style="margin-top: 8px;">Open Main App</button>
                 </div>
                 <div class="wallet-connected hidden" id="walletConnected">
                     <div class="wallet-info">
