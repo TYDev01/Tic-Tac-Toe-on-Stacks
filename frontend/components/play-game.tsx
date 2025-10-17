@@ -1,24 +1,41 @@
 "use client";
 
-import { Game, Move } from "@/lib/contract";
+import { Game, Move, getTimeoutInfo, canCancelGame, getCurrentBlockHeight } from "@/lib/contract";
 import { GameBoard } from "./game-board";
 import { abbreviateAddress, explorerAddress, formatStx } from "@/lib/stx-utils";
 import Link from "next/link";
 import { useStacks } from "@/hooks/use-stacks";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface PlayGameProps {
   game: Game;
 }
 
 export function PlayGame({ game }: PlayGameProps) {
-  const { addresses, handleJoinGame, handlePlayGame } = useStacks();
+  const { addresses, handleJoinGame, handlePlayGame, handleCancelGameTimeout } = useStacks();
 
   // Initial game board is the current `game.board` state
   const [board, setBoard] = useState(game.board);
 
   // cell where user played their move. -1 denotes no move has been played
   const [playedMoveIndex, setPlayedMoveIndex] = useState(-1);
+
+  // Current block height for timeout calculations
+  const [currentBlockHeight, setCurrentBlockHeight] = useState(0);
+
+  // Update current block height periodically
+  useEffect(() => {
+    const updateBlockHeight = async () => {
+      const height = await getCurrentBlockHeight();
+      setCurrentBlockHeight(height);
+    };
+
+    updateBlockHeight();
+    // Update every 30 seconds
+    const interval = setInterval(updateBlockHeight, 30000);
+    
+    return () => clearInterval(interval);
+  }, []);
 
   // If user is not logged in, don't show anything
   if (!addresses || addresses.length === 0) return null;
@@ -34,6 +51,12 @@ export function PlayGame({ game }: PlayGameProps) {
     (game["is-player-one-turn"] && isPlayerOne) ||
     (!game["is-player-one-turn"] && isPlayerTwo);
   const isGameOver = game.winner !== null;
+
+  // Timeout calculations
+  const timeoutInfo = currentBlockHeight > 0 ? getTimeoutInfo(game, currentBlockHeight) : null;
+  const canCancel = currentBlockHeight > 0 ? canCancelGame(game, currentAddress, currentBlockHeight) : false;
+  // Only show timeout info for games with timestamps (new games)
+  const showTimeoutInfo = game["player-two"] && !isGameOver && timeoutInfo && game["last-move-block"] > 0;
 
   function onCellClick(index: number) {
     const tempBoard = [...board];
@@ -95,6 +118,31 @@ export function PlayGame({ game }: PlayGameProps) {
             </Link>
           </div>
         )}
+
+        {showTimeoutInfo && timeoutInfo && (
+          <div className="flex flex-col gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-yellow-700 font-medium">Game Timeout:</span>
+              {timeoutInfo.isTimedOut ? (
+                <span className="text-red-600 font-medium">⏰ TIMED OUT</span>
+              ) : (
+                <span className="text-yellow-600">
+                  {timeoutInfo.timeoutInMinutes}m remaining
+                </span>
+              )}
+            </div>
+            {timeoutInfo.isTimedOut && canCancel && (
+              <div className="text-sm text-yellow-700">
+                The opponent hasn't moved in time. You can cancel and claim the funds.
+              </div>
+            )}
+            {timeoutInfo.isTimedOut && !canCancel && (
+              <div className="text-sm text-yellow-700">
+                Game timed out. The waiting player can claim the funds.
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {isJoinable && (
@@ -117,6 +165,15 @@ export function PlayGame({ game }: PlayGameProps) {
 
       {isJoinedAlready && !isMyTurn && !isGameOver && (
         <div className="text-gray-500">Waiting for opponent to play...</div>
+      )}
+
+      {canCancel && (
+        <button
+          onClick={() => handleCancelGameTimeout(game.id)}
+          className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition-colors"
+        >
+          Cancel Game (Timeout)
+        </button>
       )}
     </>
   );

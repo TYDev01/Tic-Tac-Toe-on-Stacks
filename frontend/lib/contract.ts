@@ -13,7 +13,7 @@ import {
 
 // REPLACE THESE WITH YOUR OWN
 const CONTRACT_ADDRESS = "ST2S0QHZC65P50HFAA2P7GD9CJBT48KDJ9DNYGDSK";
-const CONTRACT_NAME = "tic-tac-toe";
+const CONTRACT_NAME = "tic-tac-toe-v2";
 
 type GameCV = {
   "player-one": PrincipalCV;
@@ -22,6 +22,7 @@ type GameCV = {
   "bet-amount": UIntCV;
   board: ListCV<UIntCV>;
   winner: OptionalCV<PrincipalCV>;
+  "last-move-block": UIntCV;
 };
 
 export type Game = {
@@ -32,6 +33,7 @@ export type Game = {
   "bet-amount": number;
   board: number[];
   winner: string | null;
+  "last-move-block": number;
 };
 
 export enum Move {
@@ -76,6 +78,18 @@ export async function getAllGames() {
   return games;
 }
 
+export async function getCurrentBlockHeight(): Promise<number> {
+  try {
+    const baseUrl = "https://api.testnet.hiro.so";
+    const response = await fetch(`${baseUrl}/extended/v1/block`);
+    const data = await response.json();
+    return data.height || 0;
+  } catch (error) {
+    console.error("Error fetching current block height:", error);
+    return 0;
+  }
+}
+
 export async function getGame(gameId: number) {
   // Use the get-game read only function to fetch the game details for the given gameId
   const gameDetails = await fetchCallReadOnlyFunction({
@@ -108,6 +122,10 @@ export async function getGame(gameId: number) {
     board: gameCV["board"].value.map((cell) => parseInt(cell.value.toString())),
     winner:
       gameCV["winner"].type === "some" ? gameCV["winner"].value.value : null,
+    // Handle backward compatibility - use 0 if last-move-block doesn't exist (old games)
+    "last-move-block": gameCV["last-move-block"] 
+      ? parseInt(gameCV["last-move-block"].value.toString())
+      : 0,
   };
   return game;
 }
@@ -149,4 +167,68 @@ export async function play(gameId: number, moveIndex: number, move: Move) {
   };
 
   return txOptions;
+}
+
+export async function cancelGameTimeout(gameId: number) {
+  const txOptions = {
+    contractAddress: CONTRACT_ADDRESS,
+    contractName: CONTRACT_NAME,
+    functionName: "cancel-game-timeout",
+    functionArgs: [uintCV(gameId)],
+  };
+
+  return txOptions;
+}
+
+// Timeout constants (should match the contract)
+export const GAME_TIMEOUT_BLOCKS = 300; // ~5 minutes
+export const ESTIMATED_SECONDS_PER_BLOCK = 1; // Rough estimate
+
+// Helper functions for timeout calculations
+export function getTimeoutInfo(game: Game, currentBlockHeight: number) {
+  // Handle old games without timestamp (return null or safe defaults)
+  if (!game["last-move-block"] || game["last-move-block"] === 0) {
+    return {
+      blocksSinceLastMove: 0,
+      blocksUntilTimeout: GAME_TIMEOUT_BLOCKS,
+      secondsUntilTimeout: GAME_TIMEOUT_BLOCKS * ESTIMATED_SECONDS_PER_BLOCK,
+      isTimedOut: false,
+      timeoutInMinutes: Math.ceil((GAME_TIMEOUT_BLOCKS * ESTIMATED_SECONDS_PER_BLOCK) / 60),
+    };
+  }
+
+  const blocksSinceLastMove = currentBlockHeight - game["last-move-block"];
+  const blocksUntilTimeout = GAME_TIMEOUT_BLOCKS - blocksSinceLastMove;
+  const secondsUntilTimeout = Math.max(0, blocksUntilTimeout * ESTIMATED_SECONDS_PER_BLOCK);
+  const isTimedOut = blocksSinceLastMove >= GAME_TIMEOUT_BLOCKS;
+  
+  return {
+    blocksSinceLastMove,
+    blocksUntilTimeout,
+    secondsUntilTimeout,
+    isTimedOut,
+    timeoutInMinutes: Math.ceil(secondsUntilTimeout / 60),
+  };
+}
+
+export function canCancelGame(game: Game, currentAddress: string, currentBlockHeight: number): boolean {
+  // Can't cancel if game is already won
+  if (game.winner) return false;
+  
+  // Can't cancel if game doesn't have two players
+  if (!game["player-two"]) return false;
+  
+  // Can't cancel old games without timestamps (they don't support timeout)
+  if (!game["last-move-block"] || game["last-move-block"] === 0) return false;
+  
+  // Can only cancel if timeout has been reached
+  const timeoutInfo = getTimeoutInfo(game, currentBlockHeight);
+  if (!timeoutInfo.isTimedOut) return false;
+  
+  // Can only cancel if you're the waiting player (not the one whose turn it is)
+  const isPlayerOne = currentAddress === game["player-one"];
+  const isPlayerTwo = currentAddress === game["player-two"];
+  const isWaitingPlayer = game["is-player-one-turn"] ? isPlayerTwo : isPlayerOne;
+  
+  return isWaitingPlayer;
 }

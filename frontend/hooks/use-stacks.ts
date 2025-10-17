@@ -7,7 +7,7 @@ import {
 } from "@stacks/connect";
 import { PostConditionMode } from "@stacks/transactions";
 import { STACKS_TESTNET } from "@stacks/network";
-import { createNewGame, joinGame, Move, play } from "@/lib/contract";
+import { createNewGame, joinGame, Move, play, cancelGameTimeout } from "@/lib/contract";
 import { getStxBalance } from "@/lib/stx-utils";
 
 const appDetails = {
@@ -177,6 +177,29 @@ export function useStacks() {
     }
   }
 
+  async function handleCancelGameTimeout(gameId: number) {
+    console.log("handleCancelGameTimeout called - state:", { connected, addresses });
+    
+    if (!connected || !addresses) return alert("Please connect wallet first");
+
+    try {
+      const txOptions = await cancelGameTimeout(gameId);
+      await openContractCall({
+        ...txOptions,
+        appDetails,
+        network: STACKS_TESTNET,
+        postConditionMode: PostConditionMode.Allow,
+        onFinish: (data) => {
+          console.log("Cancel Game Timeout TX:", data);
+          alert("Game cancelled due to timeout. Funds returned!");
+        },
+      });
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message);
+    }
+  }
+
   //  Auto-reconnect on page reload
   useEffect(() => {
     console.log("useEffect: Checking for stored session or existing connection");
@@ -233,5 +256,6 @@ export function useStacks() {
     handleCreateGame,
     handleJoinGame,
     handlePlayGame,
+    handleCancelGameTimeout,
   };
 }

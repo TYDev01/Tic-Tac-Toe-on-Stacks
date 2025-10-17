@@ -1,14 +1,57 @@
 "use client";
 
-import { Game } from "@/lib/contract";
+import { Game, getTimeoutInfo, getCurrentBlockHeight } from "@/lib/contract";
 import Link from "next/link";
 import { GameBoard } from "./game-board";
 import { useStacks } from "@/hooks/use-stacks";
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { formatStx } from "@/lib/stx-utils";
 
 export function GamesList({ games }: { games: Game[] }) {
   const { addresses } = useStacks();
+  
+  // Current block height for timeout calculations
+  const [currentBlockHeight, setCurrentBlockHeight] = useState(0);
+
+  // Update current block height periodically
+  useEffect(() => {
+    const updateBlockHeight = async () => {
+      const height = await getCurrentBlockHeight();
+      setCurrentBlockHeight(height);
+    };
+
+    updateBlockHeight();
+    // Update every minute for games list
+    const interval = setInterval(updateBlockHeight, 60000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  // Helper function to render timeout badge
+  const renderTimeoutBadge = (game: Game) => {
+    // Don't show timeout badges for old games without timestamps
+    if (!game["player-two"] || game.winner || currentBlockHeight === 0 || !game["last-move-block"] || game["last-move-block"] === 0) {
+      return null;
+    }
+    
+    const timeoutInfo = getTimeoutInfo(game, currentBlockHeight);
+    
+    if (timeoutInfo.isTimedOut) {
+      return (
+        <span className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded-full">
+          ⏰ Timed Out
+        </span>
+      );
+    } else if (timeoutInfo.timeoutInMinutes <= 2) {
+      return (
+        <span className="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full">
+          ⚠️ {timeoutInfo.timeoutInMinutes}m left
+        </span>
+      );
+    }
+    
+    return null;
+  };
 
   // User Games are games in which the user is a player
   // and a winner has not been decided yet
@@ -79,6 +122,11 @@ export function GamesList({ games }: { games: Game[] }) {
                   <div className="text-md px-1 py-0.5 bg-gray-800 rounded text-center w-full">
                     Next Turn: {game["is-player-one-turn"] ? "X" : "O"}
                   </div>
+                  {renderTimeoutBadge(game) && (
+                    <div className="flex justify-center">
+                      {renderTimeoutBadge(game)}
+                    </div>
+                  )}
                 </Link>
               ))}
             </div>

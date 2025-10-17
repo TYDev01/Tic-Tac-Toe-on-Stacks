@@ -9,6 +9,9 @@
 (define-constant ERR_GAME_NOT_FOUND u102) ;; Error thrown when a game cannot be found given a Game ID, i.e. invalid Game ID
 (define-constant ERR_GAME_CANNOT_BE_JOINED u103) ;; Error thrown when a game cannot be joined, usually because it already has two players
 (define-constant ERR_NOT_YOUR_TURN u104) ;; Error thrown when a player tries to make a move when it is not their turn
+(define-constant ERR_TIMEOUT_NOT_REACHED u105) ;; Error thrown when trying to cancel a game before timeout
+(define-constant ERR_NOT_OPPONENT u106) ;; Error thrown when someone other than the opponent tries to cancel
+(define-constant GAME_TIMEOUT_BLOCKS u300) ;; Timeout period: ~5 minutes (assuming 1 block per second)
 
 (define-data-var latest-game-id uint u0)
 
@@ -22,7 +25,8 @@
         bet-amount: uint,
         board: (list 9 uint),
         
-        winner: (optional principal)
+        winner: (optional principal),
+        last-move-block: uint ;; Block height when the last move was made
     }
 )
 
@@ -57,7 +61,8 @@
             is-player-one-turn: false,
             bet-amount: bet-amount,
             board: game-board,
-            winner: none
+            winner: none,
+            last-move-block: stacks-block-height
         })
     )
 
@@ -94,7 +99,8 @@
         (game-data (merge original-game-data {
             board: game-board,
             player-two: (some contract-caller),
-            is-player-one-turn: true
+            is-player-one-turn: true,
+            last-move-block: stacks-block-height
         }))
     )
 
@@ -173,7 +179,8 @@
         (game-data (merge original-game-data {
             board: game-board,
             is-player-one-turn: (not is-player-one-turn),
-            winner: (if is-now-winner (some player-turn) none)
+            winner: (if is-now-winner (some player-turn) none),
+            last-move-block: stacks-block-height
         }))
     )
 
@@ -193,6 +200,52 @@
     ;; Log the action of a move being made
     (print {action: "play", data: game-data})
     ;; Return the Game ID of the game
+    (ok game-id)
+))
+
+;; Function to cancel a game due to timeout and return funds to the waiting player
+(define-public (cancel-game-timeout (game-id uint))
+    (let (
+        ;; Load the game data for the game being cancelled, throw an error if Game ID is invalid
+        (game-data (unwrap! (map-get? games game-id) (err ERR_GAME_NOT_FOUND)))
+        ;; Get the current player whose turn it is
+        (is-player-one-turn (get is-player-one-turn game-data))
+        ;; Get player one and player two addresses
+        (player-one (get player-one game-data))
+        (player-two (unwrap! (get player-two game-data) (err ERR_GAME_NOT_FOUND)))
+        ;; Determine the waiting player (the one who should receive the funds)
+        (waiting-player (if is-player-one-turn player-two player-one))
+        ;; Get the bet amount
+        (bet-amount (get bet-amount game-data))
+        ;; Get the last move block
+        (last-move-block (get last-move-block game-data))
+        ;; Calculate if timeout has been reached
+        (blocks-since-last-move (- stacks-block-height last-move-block))
+        ;; Mark the game as cancelled by setting the waiting player as winner
+        (cancelled-game-data (merge game-data {
+            winner: (some waiting-player)
+        }))
+    )
+
+    ;; Ensure the game hasn't already been won
+    (asserts! (is-none (get winner game-data)) (err ERR_GAME_NOT_FOUND))
+    ;; Ensure the game has two players (can't timeout a game that hasn't been joined)
+    (asserts! (is-some (get player-two game-data)) (err ERR_GAME_NOT_FOUND))
+    ;; Ensure enough time has passed since the last move
+    (asserts! (>= blocks-since-last-move GAME_TIMEOUT_BLOCKS) (err ERR_TIMEOUT_NOT_REACHED))
+    ;; Ensure the caller is the waiting player (the one who should receive funds)
+    (asserts! (is-eq contract-caller waiting-player) (err ERR_NOT_OPPONENT))
+
+    ;; Transfer all funds (both players' bets) to the waiting player
+    (try! (as-contract (stx-transfer? (* u2 bet-amount) tx-sender waiting-player)))
+
+    ;; Update the game with the winner
+    (map-set games game-id cancelled-game-data)
+
+    ;; Log the cancellation
+    (print { action: "cancel-timeout", data: cancelled-game-data, waiting-player: waiting-player })
+    
+    ;; Return the game ID
     (ok game-id)
 ))
 
