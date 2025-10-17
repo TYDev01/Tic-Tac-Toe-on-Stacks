@@ -1,0 +1,45 @@
+{
+  "manifest_version": 3,
+  "name": "Tic-Tac-Toe on Stacks",
+  "version": "1.0.0",
+  "description": "Play real-stakes tic-tac-toe on Stacks blockchain. Get notifications for your games and quick access to create/join matches.",
+  "permissions": [
+    "storage",
+    "notifications",
+    "activeTab",
+    "background",
+    "alarms"
+  ],
+  "host_permissions": [
+    "https://api.hiro.so/*",
+    "https://stacks-node-api.testnet.stacks.co/*",
+    "*://localhost:*/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "css": ["content.css"]
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Tic-Tac-Toe on Stacks",
+    "default_icon": {
+      "16": "icons/icon16.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["injected.js"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

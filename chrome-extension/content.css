@@ -1,0 +1,86 @@
+/* Content Script CSS for Tic-Tac-Toe Chrome Extension */
+
+/* Notification Container */
+#ttt-notifications {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif !important;
+}
+
+/* Extension Badge */
+#ttt-extension-badge {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif !important;
+    user-select: none;
+}
+
+/* Notification Animations */
+@keyframes slideInFromRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutToRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+/* Notification Styles */
+.ttt-notification {
+    animation: slideInFromRight 0.3s ease-out;
+}
+
+.ttt-notification.dismissing {
+    animation: slideOutToRight 0.3s ease-in;
+}
+
+/* Pulse animation for extension badge */
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+#ttt-extension-badge.pulse {
+    animation: pulse 2s infinite;
+}
+
+/* Ensure notifications are always on top */
+#ttt-notifications * {
+    z-index: 999999 !important;
+}
+
+/* Override any conflicting styles */
+#ttt-notifications div {
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    padding: 16px 20px !important;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 480px) {
+    #ttt-notifications {
+        left: 10px !important;
+        right: 10px !important;
+        top: 10px !important;
+    }
+    
+    #ttt-extension-badge {
+        bottom: 10px !important;
+        left: 10px !important;
+        font-size: 11px !important;
+        padding: 6px 10px !important;
+    }
+}
