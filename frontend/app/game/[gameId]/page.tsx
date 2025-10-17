@@ -1,4 +1,4 @@
-import { PlayGame } from "@/components/play-game";
+import { ClientGameWrapper } from "@/components/client-game-wrapper";
 import { getGame } from "@/lib/contract";
 
 type Params = Promise<{ gameId: string }>;
@@ -13,11 +13,16 @@ export default async function GamePage({ params }: { params: Params }) {
       <div className="text-center mb-20">
         <h1 className="text-4xl font-bold">Game #{gameId}</h1>
         <span className="text-sm text-gray-500">
-          Play the game with your opponent
+          {game["is-draw"] ? "Game ended in a draw" : 
+           game.winner ? "Game finished" : 
+           "Play the game with your opponent"}
         </span>
       </div>
 
-      <PlayGame game={game} />
+      <ClientGameWrapper 
+        initialGame={game} 
+        gameId={parseInt(gameId)}
+      />
     </section>
   );
 }

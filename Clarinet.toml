@@ -1,11 +1,11 @@
 [project]
-name = 'tic-tac-toe-v2'
+name = 'tic-tac-toe-v3'
 description = ''
 authors = []
 telemetry = true
 cache_dir = './.cache'
 requirements = []
-[contracts.tic-tac-toe-v2]
+[contracts.tic-tac-toe-v3]
 path = 'contracts/tic-tac-toe-v2.clar'
 clarity_version = 3
 epoch = 'latest'

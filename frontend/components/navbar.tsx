@@ -15,19 +15,33 @@ export function Navbar() {
         TicTacToe 🎲
       </Link>
 
-      <div className="flex items-center gap-8">
+      <div className="flex items-center gap-6">
         <Link href="/" className="text-gray-300 hover:text-gray-50">
           Home
+        </Link>
+        <Link 
+          href="/matchmaking" 
+          className="text-blue-300 hover:text-blue-100 font-medium"
+          title="Find opponents and play ranked matches"
+        >
+          🎯 Matchmaking
+        </Link>
+        <Link 
+          href="/rankings" 
+          className="text-yellow-300 hover:text-yellow-100 font-medium"
+          title="View player rankings and leaderboard"
+        >
+          🏆 Rankings
         </Link>
         <Link href="/create" className="text-gray-300 hover:text-gray-50">
           Create Game
         </Link>
         <Link 
-          href="/#live-games" 
+          href="/spectate" 
           className="text-purple-300 hover:text-purple-100 font-medium"
           title="Watch live games"
         >
-          👀 Live Games
+          👀 Spectate
         </Link>
       </div>
 

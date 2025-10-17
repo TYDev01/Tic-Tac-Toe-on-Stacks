@@ -122,7 +122,7 @@ A fully decentralized, real-money tic-tac-toe game built on the Stacks blockchai
 ## 🔧 Technical Details
 
 ### Smart Contract Features
-- **Contract Address**: `ST2S0QHZC65P50HFAA2P7GD9CJBT48KDJ9DNYGDSK.tic-tac-toe-v2`
+- **Contract Address**: `ST2S0QHZC65P50HFAA2P7GD9CJBT48KDJ9DNYGDSK.tic-tac-toe-v3`
 - **Language**: Clarity smart contracts on Stacks blockchain
 - **Security**: Trustless game logic with automatic stake management
 - **Transparency**: All moves and outcomes recorded on-chain
