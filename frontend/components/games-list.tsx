@@ -8,13 +8,13 @@ import { useMemo } from "react";
 import { formatStx } from "@/lib/stx-utils";
 
 export function GamesList({ games }: { games: Game[] }) {
-  const { userData } = useStacks();
+  const { addresses } = useStacks();
 
   // User Games are games in which the user is a player
   // and a winner has not been decided yet
   const userGames = useMemo(() => {
-    if (!userData) return [];
-    const userAddress = userData.profile.stxAddress.testnet;
+    if (!addresses || addresses.length === 0) return [];
+    const userAddress = addresses[0];
     const filteredGames = games.filter(
       (game) =>
         (game["player-one"] === userAddress ||
@@ -22,13 +22,13 @@ export function GamesList({ games }: { games: Game[] }) {
         game.winner === null
     );
     return filteredGames;
-  }, [userData, games]);
+  }, [addresses, games]);
 
   // Joinable games are games in which there still isn't a second player
   // and also the currently logged in user is not the creator of the game
   const joinableGames = useMemo(() => {
-    if (!userData) return [];
-    const userAddress = userData.profile.stxAddress.testnet;
+    if (!addresses || addresses.length === 0) return [];
+    const userAddress = addresses[0];
 
     return games.filter(
       (game) =>
@@ -36,7 +36,7 @@ export function GamesList({ games }: { games: Game[] }) {
         game["player-one"] !== userAddress &&
         game["player-two"] === null
     );
-  }, [games, userData]);
+  }, [games, addresses]);
 
   // Ended games are games in which the winner has been decided
   const endedGames = useMemo(() => {
@@ -45,7 +45,7 @@ export function GamesList({ games }: { games: Game[] }) {
 
   return (
     <div className="w-full max-w-4xl space-y-12">
-      {userData ? (
+      {addresses && addresses.length > 0 ? (
         <div>
           <h2 className="text-2xl font-bold mb-4">Active Games</h2>
           {userGames.length === 0 ? (
