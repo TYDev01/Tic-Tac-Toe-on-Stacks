@@ -17,7 +17,7 @@ export function SpectateGame({ gameId }: SpectateGameProps) {
   const [currentBlockHeight, setCurrentBlockHeight] = useState(0);
   const [lastUpdateTime, setLastUpdateTime] = useState<string>("");
 
-  // Function to fetch the latest game state
+  // Function to fetch the latest game state.
   const fetchGameState = async () => {
     try {
       const gameData = await getGame(gameId);
