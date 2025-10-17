@@ -190,8 +190,8 @@ export function useStacks() {
         network: STACKS_TESTNET,
         postConditionMode: PostConditionMode.Allow,
         onFinish: (data) => {
-          console.log("Cancel Game Timeout TX:", data);
-          alert("Game cancelled due to timeout. Funds returned!");
+          console.log("Withdraw Stakes TX:", data);
+          alert("🎉 Stakes withdrawn successfully! All STX tokens have been returned to your wallet.");
         },
       });
     } catch (err: any) {
@@ -199,6 +199,9 @@ export function useStacks() {
       alert(err.message);
     }
   }
+
+  // Alias function with clearer name
+  const handleWithdrawStakes = handleCancelGameTimeout;
 
   //  Auto-reconnect on page reload
   useEffect(() => {
@@ -257,5 +260,6 @@ export function useStacks() {
     handleJoinGame,
     handlePlayGame,
     handleCancelGameTimeout,
+    handleWithdrawStakes,
   };
 }

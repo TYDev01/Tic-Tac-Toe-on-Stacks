@@ -12,7 +12,7 @@ interface PlayGameProps {
 }
 
 export function PlayGame({ game }: PlayGameProps) {
-  const { addresses, handleJoinGame, handlePlayGame, handleCancelGameTimeout } = useStacks();
+  const { addresses, handleJoinGame, handlePlayGame, handleWithdrawStakes } = useStacks();
 
   // Initial game board is the current `game.board` state
   const [board, setBoard] = useState(game.board);
@@ -133,12 +133,17 @@ export function PlayGame({ game }: PlayGameProps) {
             </div>
             {timeoutInfo.isTimedOut && canCancel && (
               <div className="text-sm text-yellow-700">
-                The opponent hasn't moved in time. You can cancel and claim the funds.
+                ✅ Your opponent didn't move in time! You can now withdraw all stakes ({formatStx(game["bet-amount"] * 2)} STX) below.
               </div>
             )}
             {timeoutInfo.isTimedOut && !canCancel && (
               <div className="text-sm text-yellow-700">
-                Game timed out. The waiting player can claim the funds.
+                ⏱️ Game timed out. The waiting player can withdraw all stakes.
+              </div>
+            )}
+            {!timeoutInfo.isTimedOut && (
+              <div className="text-sm text-yellow-700">
+                ⏳ If your opponent doesn't move within {timeoutInfo.timeoutInMinutes} minutes, you'll be able to withdraw all stakes ({formatStx(game["bet-amount"] * 2)} STX).
               </div>
             )}
           </div>
@@ -168,12 +173,19 @@ export function PlayGame({ game }: PlayGameProps) {
       )}
 
       {canCancel && (
-        <button
-          onClick={() => handleCancelGameTimeout(game.id)}
-          className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition-colors"
-        >
-          Cancel Game (Timeout)
-        </button>
+        <div className="flex flex-col items-center gap-2 p-4 bg-green-50 border border-green-200 rounded-lg">
+          <div className="text-sm text-green-700 text-center">
+            🎉 Opponent didn't move within 5 minutes!
+            <br />
+            You can withdraw <span className="font-bold">{formatStx(game["bet-amount"] * 2)} STX</span> (both stakes)
+          </div>
+          <button
+            onClick={() => handleWithdrawStakes(game.id)}
+            className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-medium"
+          >
+            💰 Withdraw Stakes ({formatStx(game["bet-amount"] * 2)} STX)
+          </button>
+        </div>
       )}
     </>
   );
