@@ -22,8 +22,9 @@ export function GameBoard({
           <div
             key={index}
             className={
-              "border border-gray-600 rounded-md flex items-center justify-center font-bold group cursor-pointer " +
-              cellClassName
+              "border border-gray-600 rounded-md flex items-center justify-center font-bold group " +
+              (onCellClick && cell === Move.EMPTY ? "cursor-pointer hover:bg-gray-700" : "cursor-default") + 
+              " " + cellClassName
             }
             onClick={() => onCellClick?.(index)}
           >

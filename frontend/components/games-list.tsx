@@ -29,12 +29,10 @@ export function GamesList({ games }: { games: Game[] }) {
 
   // Helper function to render timeout badge
   const renderTimeoutBadge = (game: Game) => {
-    // Don't show timeout badges for old games without timestamps
-    if (!game["player-two"] || game.winner || currentBlockHeight === 0 || !game["last-move-block"] || game["last-move-block"] === 0) {
-      return null;
-    }
-    
-    const timeoutInfo = getTimeoutInfo(game, currentBlockHeight);
+  // Don't show timeout badges for old games without timestamps or finished games
+  if (!game["player-two"] || game.winner || game["is-draw"] || currentBlockHeight === 0 || !game["last-move-block"] || game["last-move-block"] === 0) {
+    return null;
+  }    const timeoutInfo = getTimeoutInfo(game, currentBlockHeight);
     
     if (timeoutInfo.isTimedOut) {
       return (
@@ -54,7 +52,7 @@ export function GamesList({ games }: { games: Game[] }) {
   };
 
   // User Games are games in which the user is a player
-  // and a winner has not been decided yet
+  // and a winner has not been decided yet and it's not a draw
   const userGames = useMemo(() => {
     if (!addresses || addresses.length === 0) return [];
     const userAddress = addresses[0];
@@ -62,7 +60,8 @@ export function GamesList({ games }: { games: Game[] }) {
       (game) =>
         (game["player-one"] === userAddress ||
           game["player-two"] === userAddress) &&
-        game.winner === null
+        game.winner === null &&
+        !game["is-draw"]
     );
     return filteredGames;
   }, [addresses, games]);
@@ -76,6 +75,7 @@ export function GamesList({ games }: { games: Game[] }) {
     return games.filter(
       (game) =>
         game.winner === null &&
+        !game["is-draw"] &&
         game["player-one"] !== userAddress &&
         game["player-two"] === null
     );
@@ -91,6 +91,7 @@ export function GamesList({ games }: { games: Game[] }) {
       .filter(
         (game) =>
           game.winner === null &&
+          !game["is-draw"] &&
           game["player-two"] !== null &&
           game["player-one"] !== userAddress &&
           game["player-two"] !== userAddress
@@ -98,9 +99,9 @@ export function GamesList({ games }: { games: Game[] }) {
       .sort((a, b) => b["bet-amount"] - a["bet-amount"]); // Sort by stakes (highest first)
   }, [games, addresses]);
 
-  // Ended games are games in which the winner has been decided
+  // Ended games are games in which the winner has been decided or it's a draw
   const endedGames = useMemo(() => {
-    return games.filter((game) => game.winner !== null);
+    return games.filter((game) => game.winner !== null || game["is-draw"]);
   }, [games]);
 
   return (
@@ -320,7 +321,11 @@ export function GamesList({ games }: { games: Game[] }) {
                   {formatStx(game["bet-amount"])} STX
                 </div>
                 <div className="text-md px-1 py-0.5 bg-gray-800 rounded text-center w-full">
-                  Winner: {game["is-player-one-turn"] ? "O" : "X"}
+                  {game["is-draw"] ? (
+                    <span className="text-yellow-400">🤝 Draw</span>
+                  ) : (
+                    <span>Winner: {game["is-player-one-turn"] ? "O" : "X"}</span>
+                  )}
                 </div>
               </Link>
             ))}
